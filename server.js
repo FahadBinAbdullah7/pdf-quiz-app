@@ -10,8 +10,6 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 app.use(cors());
 app.use(express.json());
-
-// Serve frontend static files
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.post('/generate-quiz', async (req, res) => {
@@ -44,7 +42,6 @@ ${text}`;
   }
 });
 
-// Fallback to serve index.html on other routes (SPA behavior)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
