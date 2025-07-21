@@ -13,13 +13,13 @@
   }
   .btn:disabled { background: #cccccc; cursor: not-allowed; }
   .quiz-container {
-    margin-top: 20px; white-space: normal; background: #f9f9f9;
-    padding: 15px; border-radius: 5px; min-height: 150px;
+    margin-top: 20px; background: #f9f9f9;
+    padding: 15px; border-radius: 5px;
   }
   table { width: 100%; border-collapse: collapse; margin-top: 20px; }
   th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
   th { background-color: #f2f2f2; }
-  .loading { font-weight: bold; color: #007BFF; }
+  #status { font-weight: bold; color: #007BFF; }
 </style>
 </head>
 <body>
@@ -30,7 +30,7 @@
 <button id="copyQuizBtn" class="btn" disabled>Copy Quiz</button>
 <button id="downloadQuizBtn" class="btn" disabled>Download Quiz</button>
 
-<div id="status" class="loading"></div>
+<div id="status"></div>
 <div id="quizContainer" class="quiz-container"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
@@ -69,33 +69,34 @@
   document.getElementById("generateQuizBtn").addEventListener("click", async () => {
     const numQuestions = prompt("How many quiz questions to generate?");
     if (numQuestions && !isNaN(numQuestions)) {
-      document.getElementById("status").textContent = "Generating quiz... please wait ⏳";
+      setStatus("Generating quiz... Please wait ⏳");
       generatedQuiz = await generateQuiz(extractedText, numQuestions);
       document.getElementById("quizContainer").innerHTML = generateQuizTable(generatedQuiz);
       document.getElementById("copyQuizBtn").disabled = false;
       document.getElementById("downloadQuizBtn").disabled = false;
-      document.getElementById("status").textContent = "";
+      clearStatus();
     }
   });
 
   async function generateQuiz(text, numQuestions) {
-    const backendUrl = "/generate-quiz";
-
-    const response = await fetch(backendUrl, {
+    const response = await fetch("/generate-quiz", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, numQuestions }),
+      body: JSON.stringify({ text, numQuestions })
     });
 
     if (!response.ok) {
-      return `Error: ${response.status} ${response.statusText}`;
+      alert(`Error: ${response.status} ${response.statusText}`);
+      return "";
     }
 
     const data = await response.json();
-    return data.quiz || "Failed to generate quiz.";
+    return data.quiz || "";
   }
 
   function generateQuizTable(quizText) {
+    if (!quizText) return "<p>No quiz generated.</p>";
+
     const rows = quizText.trim().split('\n');
     if (rows.length === 0) return '<p>No quiz generated.</p>';
 
@@ -109,26 +110,22 @@
     ];
 
     let html = '<table id="quizTable"><thead><tr>';
-    headers.forEach(header => {
-      html += `<th>${header}</th>`;
-    });
+    headers.forEach(header => html += `<th>${header}</th>`);
     html += '</tr></thead><tbody>';
 
     rows.forEach(row => {
-      const columns = row.split('\t').map(val => val === 'null' ? '' : val);
+      const columns = row.split('\t').map((val, idx) => {
+        val = (val === 'null' || val === null || val === undefined) ? '' : val;
 
-      // convert true/false to 1/0 in _is_correct columns
-      const mappedColumns = columns.map((col, idx) => {
         if (headers[idx]?.toLowerCase().includes('is_correct')) {
-          return col.toLowerCase() === 'true' ? '1' : (col.toLowerCase() === 'false' ? '0' : col);
+          if (val.toLowerCase() === 'true') return '1';
+          if (val.toLowerCase() === 'false') return '0';
         }
-        return col;
+        return val;
       });
 
       html += '<tr>';
-      mappedColumns.forEach(col => {
-        html += `<td>${col}</td>`;
-      });
+      columns.forEach(col => html += `<td>${col}</td>`);
       html += '</tr>';
     });
 
@@ -138,31 +135,39 @@
 
   document.getElementById("copyQuizBtn").addEventListener("click", () => {
     const quizTable = document.getElementById('quizTable');
-    if (quizTable) {
-      const range = document.createRange();
-      range.selectNode(quizTable);
-      window.getSelection().removeAllRanges();
-      window.getSelection().addRange(range);
+    if (!quizTable) return;
 
-      try {
-        document.execCommand('copy');
-        alert('Quiz table copied to clipboard including headers!');
-      } catch (err) {
-        alert('Failed to copy table.');
-      }
-      window.getSelection().removeAllRanges();
+    const range = document.createRange();
+    range.selectNode(quizTable);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    try {
+      document.execCommand('copy');
+      alert('Quiz table copied to clipboard (including headers).');
+    } catch {
+      alert('Failed to copy the quiz table.');
     }
+    selection.removeAllRanges();
   });
 
   document.getElementById("downloadQuizBtn").addEventListener("click", () => {
-    if (generatedQuiz) {
-      const blob = new Blob([generatedQuiz], { type: "text/plain" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "quiz.txt";
-      link.click();
-    }
+    if (!generatedQuiz) return;
+    const blob = new Blob([generatedQuiz], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "quiz.txt";
+    link.click();
   });
+
+  function setStatus(message) {
+    document.getElementById('status').textContent = message;
+  }
+
+  function clearStatus() {
+    document.getElementById('status').textContent = '';
+  }
 </script>
 
 </body>
