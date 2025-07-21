@@ -1,94 +1,147 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>PDP Comparison and Generation</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .section { margin-bottom: 20px; }
-        .error { color: red; }
-        textarea { width: 100%; height: 100px; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PDF Quiz Generator</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+  h1 { text-align: center; }
+  .btn {
+    padding: 10px 20px; background: #007BFF; color: white;
+    border: none; border-radius: 5px; cursor: pointer; margin-right: 5px;
+  }
+  .btn:disabled { background: #cccccc; cursor: not-allowed; }
+  .quiz-container {
+    margin-top: 20px; white-space: normal; background: #f9f9f9;
+    padding: 15px; border-radius: 5px; min-height: 150px;
+  }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+  th { background-color: #f2f2f2; }
+</style>
 </head>
 <body>
-    <h1>PDP Comparison and Generation</h1>
 
-    <!-- Step 1: Compare PDPs -->
-    <div class="section">
-        <h2>Step 1: Compare PDPs</h2>
-        <form method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="action" value="compare">
-            <label>Your PDP URL:</label><br>
-            <input type="text" name="your_url" style="width: 100%;"><br>
-            <label>Competitor PDP URL:</label><br>
-            <input type="text" name="comp_url" style="width: 100%;"><br>
-            <input type="submit" value="Compare PDPs">
-        </form>
-    </div>
+<h1>PDF Quiz Generator</h1>
+<input type="file" id="pdfInput" accept="application/pdf" /><br /><br />
+<button id="generateQuizBtn" class="btn" disabled>Generate Quiz</button>
+<button id="copyQuizBtn" class="btn" disabled>Copy Quiz</button>
+<button id="downloadQuizBtn" class="btn" disabled>Download Quiz</button>
 
-    <!-- Display PDP Analysis -->
-    {% if result.pdp_analysis %}
-    <div class="section">
-        <h2>PDP Analysis</h2>
-        <pre>{{ result.pdp_analysis }}</pre>
-    </div>
-    {% endif %}
+<div id="quizContainer" class="quiz-container"></div>
 
-    <!-- Step 2: Upload PDF -->
-    {% if result.pdp_analysis %}
-    <div class="section">
-        <h2>Step 2: Upload PDP Description PDF</h2>
-        <form method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="action" value="upload">
-            <input type="hidden" name="pdp_analysis" value="{{ result.pdp_analysis }}">
-            <label>Upload PDF:</label><br>
-            <input type="file" name="pdf_file" accept=".pdf"><br>
-            <input type="submit" value="Upload PDF">
-        </form>
-    </div>
-    {% endif %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+<script>
+  let extractedText = "";
+  let generatedQuiz = "";
 
-    <!-- Step 3: Specify Program and Generate SEO Keywords -->
-    {% if result.pdf_text %}
-    <div class="section">
-        <h2>Step 3: Specify Program and Generate SEO Keywords</h2>
-        <form method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="action" value="generate_seo">
-            <input type="hidden" name="pdp_analysis" value="{{ result.pdp_analysis }}">
-            <input type="hidden" name="pdf_text" value="{{ result.pdf_text }}">
-            <label>Program Name:</label><br>
-            <input type="text" name="program" value="{{ result.program }}"><br>
-            <input type="submit" value="Generate SEO Keywords">
-        </form>
-    </div>
-    {% endif %}
+  document.getElementById("pdfInput").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      extractedText = await extractPDFText(file);
+      alert("PDF text extracted successfully!");
+      document.getElementById("generateQuizBtn").disabled = false;
+    }
+  });
 
-    <!-- Display SEO Keywords -->
-    {% if result.seo_keywords %}
-    <div class="section">
-        <h2>SEO Keywords</h2>
-        <form method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="action" value="generate_pdp">
-            <input type="hidden" name="pdp_analysis" value="{{ result.pdp_analysis }}">
-            <input type="hidden" name="pdf_text" value="{{ result.pdf_text }}">
-            <input type="hidden" name="program" value="{{ result.program }}">
-            <label>Edit SEO Keywords:</label><br>
-            <textarea name="seo_keywords">{{ result.seo_keywords }}</textarea><br>
-            <input type="submit" value="Generate PDP Description">
-        </form>
-    </div>
-    {% endif %}
+  async function extractPDFText(file) {
+    const reader = new FileReader();
+    return new Promise((resolve) => {
+      reader.onload = async function () {
+        const typedArray = new Uint8Array(this.result);
+        const pdf = await pdfjsLib.getDocument(typedArray).promise;
+        let text = "";
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const pageText = content.items.map((item) => item.str).join(" ");
+          text += pageText + "\n";
+        }
+        resolve(text);
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
 
-    <!-- Display Generated PDP Description -->
-    {% if result.pdp_description %}
-    <div class="section">
-        <h2>Generated PDP Description</h2>
-        <pre>{{ result.pdp_description }}</pre>
-    </div>
-    {% endif %}
+  document.getElementById("generateQuizBtn").addEventListener("click", async () => {
+    const numQuestions = prompt("How many quiz questions to generate?");
+    if (numQuestions && !isNaN(numQuestions)) {
+      generatedQuiz = await generateQuiz(extractedText, numQuestions);
+      document.getElementById("quizContainer").innerHTML = generateQuizTable(generatedQuiz);
+      document.getElementById("copyQuizBtn").disabled = false;
+      document.getElementById("downloadQuizBtn").disabled = false;
+    }
+  });
 
-    <!-- Display Errors -->
-    {% if result.error %}
-    <div class="error">{{ result.error }}</div>
-    {% endif %}
+  async function generateQuiz(text, numQuestions) {
+    const backendUrl = "/generate-quiz";
+
+    const response = await fetch(backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, numQuestions }),
+    });
+
+    if (!response.ok) {
+      return `Error: ${response.status} ${response.statusText}`;
+    }
+
+    const data = await response.json();
+    return data.quiz || "Failed to generate quiz.";
+  }
+
+  function generateQuizTable(quizText) {
+    const rows = quizText.trim().split('\n');
+    if (rows.length === 0) return '<p>No quiz generated.</p>';
+
+    const headers = [
+      'Title', 'Image', 'Thumbnail', 'Video', 'Audio', 'Explanation',
+      'Explanation Image', 'Explanation Video', 'Explanation Audio',
+      'Option 1 Answer', 'Option 1 Correct', 'Option 1 Image', 'Option 1 Audio', 'Option 1 Video',
+      'Option 2 Answer', 'Option 2 Correct', 'Option 2 Image', 'Option 2 Video', 'Option 2 Audio',
+      'Option 3 Answer', 'Option 3 Correct', 'Option 3 Image', 'Option 3 Video', 'Option 3 Audio',
+      'Option 4 Answer', 'Option 4 Correct'
+    ];
+
+    let html = '<table><thead><tr>';
+    headers.forEach(header => {
+      html += `<th>${header}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    rows.forEach(row => {
+      const columns = row.split('\t');
+      html += '<tr>';
+      columns.forEach(col => {
+        html += `<td>${col || ''}</td>`;
+      });
+      html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    return html;
+  }
+
+  document.getElementById("copyQuizBtn").addEventListener("click", () => {
+    if (generatedQuiz) {
+      navigator.clipboard
+        .writeText(generatedQuiz)
+        .then(() => alert("Quiz copied to clipboard!"))
+        .catch(() => alert("Failed to copy quiz."));
+    }
+  });
+
+  document.getElementById("downloadQuizBtn").addEventListener("click", () => {
+    if (generatedQuiz) {
+      const blob = new Blob([generatedQuiz], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "quiz.txt";
+      link.click();
+    }
+  });
+</script>
+
 </body>
 </html>
