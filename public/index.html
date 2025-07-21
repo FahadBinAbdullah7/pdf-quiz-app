@@ -19,6 +19,7 @@
   table { width: 100%; border-collapse: collapse; margin-top: 20px; }
   th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
   th { background-color: #f2f2f2; }
+  .loading { font-weight: bold; color: #007BFF; }
 </style>
 </head>
 <body>
@@ -29,6 +30,7 @@
 <button id="copyQuizBtn" class="btn" disabled>Copy Quiz</button>
 <button id="downloadQuizBtn" class="btn" disabled>Download Quiz</button>
 
+<div id="status" class="loading"></div>
 <div id="quizContainer" class="quiz-container"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
@@ -67,10 +69,12 @@
   document.getElementById("generateQuizBtn").addEventListener("click", async () => {
     const numQuestions = prompt("How many quiz questions to generate?");
     if (numQuestions && !isNaN(numQuestions)) {
+      document.getElementById("status").textContent = "Generating quiz... please wait ⏳";
       generatedQuiz = await generateQuiz(extractedText, numQuestions);
       document.getElementById("quizContainer").innerHTML = generateQuizTable(generatedQuiz);
       document.getElementById("copyQuizBtn").disabled = false;
       document.getElementById("downloadQuizBtn").disabled = false;
+      document.getElementById("status").textContent = "";
     }
   });
 
@@ -104,17 +108,26 @@
       'Option 4 Answer', 'Option 4 Correct'
     ];
 
-    let html = '<table><thead><tr>';
+    let html = '<table id="quizTable"><thead><tr>';
     headers.forEach(header => {
       html += `<th>${header}</th>`;
     });
     html += '</tr></thead><tbody>';
 
     rows.forEach(row => {
-      const columns = row.split('\t');
+      const columns = row.split('\t').map(val => val === 'null' ? '' : val);
+
+      // convert true/false to 1/0 in _is_correct columns
+      const mappedColumns = columns.map((col, idx) => {
+        if (headers[idx]?.toLowerCase().includes('is_correct')) {
+          return col.toLowerCase() === 'true' ? '1' : (col.toLowerCase() === 'false' ? '0' : col);
+        }
+        return col;
+      });
+
       html += '<tr>';
-      columns.forEach(col => {
-        html += `<td>${col || ''}</td>`;
+      mappedColumns.forEach(col => {
+        html += `<td>${col}</td>`;
       });
       html += '</tr>';
     });
@@ -124,11 +137,20 @@
   }
 
   document.getElementById("copyQuizBtn").addEventListener("click", () => {
-    if (generatedQuiz) {
-      navigator.clipboard
-        .writeText(generatedQuiz)
-        .then(() => alert("Quiz copied to clipboard!"))
-        .catch(() => alert("Failed to copy quiz."));
+    const quizTable = document.getElementById('quizTable');
+    if (quizTable) {
+      const range = document.createRange();
+      range.selectNode(quizTable);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+
+      try {
+        document.execCommand('copy');
+        alert('Quiz table copied to clipboard including headers!');
+      } catch (err) {
+        alert('Failed to copy table.');
+      }
+      window.getSelection().removeAllRanges();
     }
   });
 
