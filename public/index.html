@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>PDF Quiz Generator</title>
 <style>
-  body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+  body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px; }
   h1 { text-align: center; }
   .btn {
     padding: 10px 20px; background: #007BFF; color: white;
@@ -13,8 +13,27 @@
   }
   .btn:disabled { background: #cccccc; cursor: not-allowed; }
   .quiz-container {
-    margin-top: 20px; white-space: pre-wrap; background: #f9f9f9;
-    padding: 15px; border-radius: 5px; min-height: 150px;
+    margin-top: 20px; background: #f9f9f9;
+    padding: 10px; border-radius: 5px; overflow-x: auto;
+    max-height: 400px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 800px;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 6px 10px;
+    vertical-align: top;
+    white-space: normal;
+  }
+  thead th {
+    background-color: #007BFF;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 1;
   }
 </style>
 </head>
@@ -65,7 +84,7 @@
     const numQuestions = prompt("How many quiz questions to generate?");
     if (numQuestions && !isNaN(numQuestions)) {
       generatedQuiz = await generateQuiz(extractedText, numQuestions);
-      document.getElementById("quizContainer").innerText = generatedQuiz;
+      document.getElementById("quizContainer").innerHTML = renderQuizTable(generatedQuiz);
       document.getElementById("copyQuizBtn").disabled = false;
       document.getElementById("downloadQuizBtn").disabled = false;
     }
@@ -88,10 +107,41 @@
     return data.quiz || "Failed to generate quiz.";
   }
 
+  function renderQuizTable(quizText) {
+    // Split by lines, filter out empty lines
+    const lines = quizText.trim().split('\n').filter(line => line.trim() !== '');
+
+    if (lines.length === 0) return 'No quiz data found.';
+
+    // First line = headers
+    const headers = lines[0].split('\t');
+
+    // Remaining lines = rows
+    const dataRows = lines.slice(1);
+
+    let html = '<table><thead><tr>';
+    headers.forEach(header => {
+      html += `<th>${header || ''}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    dataRows.forEach(row => {
+      const cols = row.split('\t');
+      html += '<tr>';
+      // Make sure empty columns appear blank
+      headers.forEach((_, idx) => {
+        html += `<td>${cols[idx] ? cols[idx] : ''}</td>`;
+      });
+      html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    return html;
+  }
+
   document.getElementById("copyQuizBtn").addEventListener("click", () => {
     if (generatedQuiz) {
-      navigator.clipboard
-        .writeText(generatedQuiz)
+      navigator.clipboard.writeText(generatedQuiz)
         .then(() => alert("Quiz copied to clipboard!"))
         .catch(() => alert("Failed to copy quiz."));
     }
