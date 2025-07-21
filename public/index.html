@@ -29,8 +29,6 @@
 <button id="copyQuizBtn" class="btn" disabled>Copy Quiz</button>
 <button id="downloadQuizBtn" class="btn" disabled>Download Quiz</button>
 
-<p id="loadingIndicator" style="display:none;">Generating quiz, please wait...</p>
-
 <div id="quizContainer" class="quiz-container"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
@@ -69,10 +67,7 @@
   document.getElementById("generateQuizBtn").addEventListener("click", async () => {
     const numQuestions = prompt("How many quiz questions to generate?");
     if (numQuestions && !isNaN(numQuestions)) {
-      document.getElementById("loadingIndicator").style.display = "block";
       generatedQuiz = await generateQuiz(extractedText, numQuestions);
-      document.getElementById("loadingIndicator").style.display = "none";
-
       document.getElementById("quizContainer").innerHTML = generateQuizTable(generatedQuiz);
       document.getElementById("copyQuizBtn").disabled = false;
       document.getElementById("downloadQuizBtn").disabled = false;
@@ -117,23 +112,9 @@
 
     rows.forEach(row => {
       const columns = row.split('\t');
-
-      // Set Explanation column to empty
-      const explanationIndex = 5;
-      columns[explanationIndex] = '';
-
-      // Convert true/false to 1/0 for option_X_is_correct
-      const isCorrectIndices = [10, 15, 20, 25];
-      isCorrectIndices.forEach(index => {
-        if (columns[index] !== undefined) {
-          columns[index] = (columns[index].toLowerCase() === 'true') ? '1' :
-                           (columns[index].toLowerCase() === 'false') ? '0' : '';
-        }
-      });
-
       html += '<tr>';
       columns.forEach(col => {
-        html += `<td>${col ?? ''}</td>`;
+        html += `<td>${col || ''}</td>`;
       });
       html += '</tr>';
     });
