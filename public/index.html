@@ -13,9 +13,12 @@
   }
   .btn:disabled { background: #cccccc; cursor: not-allowed; }
   .quiz-container {
-    margin-top: 20px; white-space: pre-wrap; background: #f9f9f9;
+    margin-top: 20px; white-space: normal; background: #f9f9f9;
     padding: 15px; border-radius: 5px; min-height: 150px;
   }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+  th { background-color: #f2f2f2; }
 </style>
 </head>
 <body>
@@ -65,7 +68,7 @@
     const numQuestions = prompt("How many quiz questions to generate?");
     if (numQuestions && !isNaN(numQuestions)) {
       generatedQuiz = await generateQuiz(extractedText, numQuestions);
-      document.getElementById("quizContainer").innerText = generatedQuiz;
+      document.getElementById("quizContainer").innerHTML = generateQuizTable(generatedQuiz);
       document.getElementById("copyQuizBtn").disabled = false;
       document.getElementById("downloadQuizBtn").disabled = false;
     }
@@ -86,6 +89,38 @@
 
     const data = await response.json();
     return data.quiz || "Failed to generate quiz.";
+  }
+
+  function generateQuizTable(quizText) {
+    const rows = quizText.trim().split('\n');
+    if (rows.length === 0) return '<p>No quiz generated.</p>';
+
+    const headers = [
+      'Title', 'Image', 'Thumbnail', 'Video', 'Audio', 'Explanation',
+      'Explanation Image', 'Explanation Video', 'Explanation Audio',
+      'Option 1 Answer', 'Option 1 Correct', 'Option 1 Image', 'Option 1 Audio', 'Option 1 Video',
+      'Option 2 Answer', 'Option 2 Correct', 'Option 2 Image', 'Option 2 Video', 'Option 2 Audio',
+      'Option 3 Answer', 'Option 3 Correct', 'Option 3 Image', 'Option 3 Video', 'Option 3 Audio',
+      'Option 4 Answer', 'Option 4 Correct'
+    ];
+
+    let html = '<table><thead><tr>';
+    headers.forEach(header => {
+      html += `<th>${header}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    rows.forEach(row => {
+      const columns = row.split('\t');
+      html += '<tr>';
+      columns.forEach(col => {
+        html += `<td>${col || ''}</td>`;
+      });
+      html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    return html;
   }
 
   document.getElementById("copyQuizBtn").addEventListener("click", () => {
