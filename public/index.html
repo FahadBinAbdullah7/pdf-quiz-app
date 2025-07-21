@@ -19,6 +19,12 @@
   table { width: 100%; border-collapse: collapse; margin-top: 20px; }
   th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
   th { background-color: #f2f2f2; }
+  #loadingIndicator {
+    display: none;
+    margin-top: 10px;
+    font-weight: bold;
+    color: green;
+  }
 </style>
 </head>
 <body>
@@ -28,6 +34,8 @@
 <button id="generateQuizBtn" class="btn" disabled>Generate Quiz</button>
 <button id="copyQuizBtn" class="btn" disabled>Copy Quiz</button>
 <button id="downloadQuizBtn" class="btn" disabled>Download Quiz</button>
+
+<div id="loadingIndicator">Generating quiz, please wait...</div>
 
 <div id="quizContainer" class="quiz-container"></div>
 
@@ -67,15 +75,18 @@
   document.getElementById("generateQuizBtn").addEventListener("click", async () => {
     const numQuestions = prompt("How many quiz questions to generate?");
     if (numQuestions && !isNaN(numQuestions)) {
-      document.getElementById("quizContainer").innerHTML = "<p>Generating quiz, please wait...</p>";
-
+      showLoading(true);
       generatedQuiz = await generateQuiz(extractedText, numQuestions);
+      showLoading(false);
       document.getElementById("quizContainer").innerHTML = generateQuizTable(generatedQuiz);
-
       document.getElementById("copyQuizBtn").disabled = false;
       document.getElementById("downloadQuizBtn").disabled = false;
     }
   });
+
+  function showLoading(isLoading) {
+    document.getElementById("loadingIndicator").style.display = isLoading ? 'block' : 'none';
+  }
 
   async function generateQuiz(text, numQuestions) {
     const backendUrl = "/generate-quiz";
@@ -108,24 +119,19 @@
     ];
 
     let html = '<table><thead><tr>';
-    headers.forEach(header => {
-      html += `<th>${header}</th>`;
-    });
+    headers.forEach(header => html += `<th>${header}</th>`);
     html += '</tr></thead><tbody>';
 
     rows.forEach(row => {
-      const columns = row.split('\t');
-      html += '<tr>';
-      columns.forEach((col, index) => {
-        let value = col === 'null' || col === null ? '' : col;
-
-        // Check if the column is one of the "Option Is Correct" columns
-        if ([10, 15, 20, 25].includes(index)) {
-          value = (value.toLowerCase() === 'true') ? '1' : '0';
-        }
-
-        html += `<td>${value}</td>`;
+      const columns = row.split('\t').map(col => {
+        if (col === 'null' || col === 'NULL') return '';   // Null to blank
+        if (col === 'true') return '1';                    // true to 1
+        if (col === 'false') return '0';                   // false to 0
+        return col;
       });
+
+      html += '<tr>';
+      columns.forEach(col => html += `<td>${col}</td>`);
       html += '</tr>';
     });
 
@@ -152,7 +158,6 @@
     }
   });
 </script>
-
 
 </body>
 </html>
