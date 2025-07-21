@@ -36,6 +36,12 @@
     top: 0;
     z-index: 1;
   }
+  #loadingIndicator {
+    margin-top: 10px;
+    font-weight: bold;
+    color: #007BFF;
+    display: none;
+  }
 </style>
 </head>
 <body>
@@ -46,6 +52,7 @@
 <button id="copyQuizBtn" class="btn" disabled>Copy Quiz</button>
 <button id="downloadQuizBtn" class="btn" disabled>Download Quiz</button>
 
+<div id="loadingIndicator">Generating quiz, please wait...</div>
 <div id="quizContainer" class="quiz-container"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
@@ -84,15 +91,32 @@
   document.getElementById("generateQuizBtn").addEventListener("click", async () => {
     const numQuestions = prompt("How many quiz questions to generate?");
     if (numQuestions && !isNaN(numQuestions)) {
-      generatedQuiz = await generateQuiz(extractedText, numQuestions);
-      document.getElementById("quizContainer").innerHTML = renderQuizTable(generatedQuiz);
-      document.getElementById("copyQuizBtn").disabled = false;
-      document.getElementById("downloadQuizBtn").disabled = false;
+      const loading = document.getElementById("loadingIndicator");
+      loading.style.display = "block";
+
+      try {
+        const quizText = await generateQuiz(extractedText, numQuestions);
+        console.log("Raw quiz text from backend:", quizText);
+
+        if (typeof quizText === "string") {
+          generatedQuiz = quizText; // save for copy/download
+          document.getElementById("quizContainer").innerHTML = renderQuizTable(quizText);
+          document.getElementById("copyQuizBtn").disabled = false;
+          document.getElementById("downloadQuizBtn").disabled = false;
+        } else {
+          document.getElementById("quizContainer").innerText = "Failed to generate quiz in expected format.";
+        }
+      } catch (error) {
+        console.error(error);
+        document.getElementById("quizContainer").innerText = "Error generating quiz.";
+      } finally {
+        loading.style.display = "none";
+      }
     }
   });
 
   async function generateQuiz(text, numQuestions) {
-    const backendUrl = "/generate-quiz";
+    const backendUrl = "/generate-quiz";  // Adjust if needed
 
     const response = await fetch(backendUrl, {
       method: "POST",
@@ -101,23 +125,19 @@
     });
 
     if (!response.ok) {
-      return `Error: ${response.status} ${response.statusText}`;
+      throw new Error(`Server error: ${response.status}`);
     }
 
     const data = await response.json();
-    return data.quiz || "Failed to generate quiz.";
+    return data.quiz;
   }
 
-  // Converts tab separated quiz text into HTML table
   function renderQuizTable(quizText) {
     const lines = quizText.trim().split('\n').filter(line => line.trim() !== '');
 
     if (lines.length === 0) return '<p>No quiz data found.</p>';
 
-    // Extract headers
     const headers = lines[0].split('\t');
-
-    // Extract rows
     const rows = lines.slice(1);
 
     let html = '<table><thead><tr>';
@@ -140,7 +160,6 @@
     return html;
   }
 
-  // Simple HTML escape for safety
   function escapeHtml(text) {
     if (!text) return '';
     return text
