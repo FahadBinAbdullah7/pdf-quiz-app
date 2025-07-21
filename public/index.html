@@ -19,8 +19,6 @@
   table { width: 100%; border-collapse: collapse; margin-top: 20px; }
   th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
   th { background-color: #f2f2f2; }
-  .loading { display: none; text-align: center; padding: 20px; }
-  .loading.active { display: block; }
 </style>
 </head>
 <body>
@@ -31,7 +29,8 @@
 <button id="copyQuizBtn" class="btn" disabled>Copy Quiz</button>
 <button id="downloadQuizBtn" class="btn" disabled>Download Quiz</button>
 
-<div id="loadingIndicator" class="loading">Generating quiz, please wait...</div>
+<p id="loadingIndicator" style="display:none;">Generating quiz, please wait...</p>
+
 <div id="quizContainer" class="quiz-container"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
@@ -70,15 +69,11 @@
   document.getElementById("generateQuizBtn").addEventListener("click", async () => {
     const numQuestions = prompt("How many quiz questions to generate?");
     if (numQuestions && !isNaN(numQuestions)) {
-      const loadingIndicator = document.getElementById("loadingIndicator");
-      loadingIndicator.classList.add("active");
-      document.getElementById("generateQuizBtn").disabled = true;
-      
+      document.getElementById("loadingIndicator").style.display = "block";
       generatedQuiz = await generateQuiz(extractedText, numQuestions);
+      document.getElementById("loadingIndicator").style.display = "none";
+
       document.getElementById("quizContainer").innerHTML = generateQuizTable(generatedQuiz);
-      
-      loadingIndicator.classList.remove("active");
-      document.getElementById("generateQuizBtn").disabled = false;
       document.getElementById("copyQuizBtn").disabled = false;
       document.getElementById("downloadQuizBtn").disabled = false;
     }
@@ -121,18 +116,24 @@
     html += '</tr></thead><tbody>';
 
     rows.forEach(row => {
-      let columns = row.split('\t');
-      // Replace null with empty string, true/false with 1/0, and ensure explanation is blank
-      columns = columns.map((col, index) => {
-        if (col === 'null') return '';
-        if (col === 'true' && headers[index].includes('Correct')) return '1';
-        if (col === 'false' && headers[index].includes('Correct')) return '0';
-        if (headers[index] === 'Explanation') return '';
-        return col || '';
+      const columns = row.split('\t');
+
+      // Set Explanation column to empty
+      const explanationIndex = 5;
+      columns[explanationIndex] = '';
+
+      // Convert true/false to 1/0 for option_X_is_correct
+      const isCorrectIndices = [10, 15, 20, 25];
+      isCorrectIndices.forEach(index => {
+        if (columns[index] !== undefined) {
+          columns[index] = (columns[index].toLowerCase() === 'true') ? '1' :
+                           (columns[index].toLowerCase() === 'false') ? '0' : '';
+        }
       });
+
       html += '<tr>';
       columns.forEach(col => {
-        html += `<td>${col}</td>`;
+        html += `<td>${col ?? ''}</td>`;
       });
       html += '</tr>';
     });
@@ -143,64 +144,16 @@
 
   document.getElementById("copyQuizBtn").addEventListener("click", () => {
     if (generatedQuiz) {
-      const headers = [
-        'Title', 'Image', 'Thumbnail', 'Video', 'Audio', 'Explanation',
-        'Explanation Image', 'Explanation Video', 'Explanation Audio',
-        'Option 1 Answer', 'Option 1 Correct', 'Option 1 Tint', 'Option 1 Audio', 'Option 1 Video',
-        'Option 2 Answer', 'Option 2 Correct', 'Option 2 Image', 'Option 2 Video', 'Option 2 Audio',
-        'Option 3 Answer', 'Option 3 Correct', 'Option 3 Image', 'Option 3 Video', 'Option 3 Audio',
-        'Option 4 Answer', 'Option 4 Correct'
-      ];
-      const rows = generatedQuiz.trim().split('\n');
-      let tableText = headers.join('\t') + '\n';
-      
-      rows.forEach(row => {
-        let columns = row.split('\t');
-        columns = columns.map((col, index) => {
-          if (col === 'null') return '';
-          if (col === 'true' && headers[index].includes('Correct')) return '1';
-          if (col === 'false' && headers[index].includes('Correct')) return '0';
-          if (headers[index] === 'Explanation') return '';
-          return col || '';
-        });
-        tableText += columns.join('\t') + '\n';
-      });
-
       navigator.clipboard
-        .writeText(tableText)
-        .then(() => alert("Quiz table copied to clipboard!"))
-        .ස
-
-System: .catch(() => alert("Failed to copy quiz table."));
+        .writeText(generatedQuiz)
+        .then(() => alert("Quiz copied to clipboard!"))
+        .catch(() => alert("Failed to copy quiz."));
     }
   });
 
   document.getElementById("downloadQuizBtn").addEventListener("click", () => {
     if (generatedQuiz) {
-      const headers = [
-        'Title', 'Image', 'Thumbnail', 'Video', 'Audio', 'Explanation',
-        'Explanation Image', 'Explanation Video', 'Explanation Audio',
-        'Option 1 Answer', 'Option 1 Correct', 'Option 1 Image', 'Option 1 Audio', 'Option 1 Video',
-        'Option 2 Answer', 'Option 2 Correct', 'Option 2 Image', 'Option 2 Video', 'Option 2 Audio',
-        'Option 3 Answer', 'Option 3 Correct', 'Option 3 Image', 'Option 3 Video', 'Option 3 Audio',
-        'Option 4 Answer', 'Option 4 Correct'
-      ];
-      let tableText = headers.join('\t') + '\n';
-      
-      const rows = generatedQuiz.trim().split('\n');
-      rows.forEach(row => {
-        let columns = row.split('\t');
-        columns = columns.map((col, index) => {
-          if (col === 'null') return '';
-          if (col === 'true' && headers[index].includes('Correct')) return '1';
-          if (col === 'false' && headers[index].includes('Correct')) return '0';
-          if (headers[index] === 'Explanation') return '';
-          return col || '';
-        });
-        tableText += columns.join('\t') + '\n';
-      });
-
-      const blob = new Blob([tableText], { type: "text/plain" });
+      const blob = new Blob([generatedQuiz], { type: "text/plain" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = "quiz.txt";
