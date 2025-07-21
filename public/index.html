@@ -1,141 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Quiz Generator</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
-        h1 { text-align: center; }
-        .btn { padding: 10px 20px; background: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; }
-        .btn:disabled { background: #cccccc; }
-        .quiz-container { margin-top: 20px; background: #f9f9f9; padding: 15px; border-radius: 5px; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #ddd; padding: 8px; }
-        th { background-color: #f2f2f2; }
-        #loadingIndicator { display: none; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PDF Quiz Generator</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+  h1 { text-align: center; }
+  .btn {
+    padding: 10px 20px; background: #007BFF; color: white;
+    border: none; border-radius: 5px; cursor: pointer; margin-right: 5px;
+  }
+  .btn:disabled { background: #cccccc; cursor: not-allowed; }
+  .quiz-container {
+    margin-top: 20px; white-space: pre-wrap; background: #f9f9f9;
+    padding: 15px; border-radius: 5px; min-height: 150px;
+  }
+</style>
 </head>
 <body>
 
 <h1>PDF Quiz Generator</h1>
-<input type="file" id="pdfInput" accept="application/pdf"><br><br>
+<input type="file" id="pdfInput" accept="application/pdf" /><br /><br />
 <button id="generateQuizBtn" class="btn" disabled>Generate Quiz</button>
 <button id="copyQuizBtn" class="btn" disabled>Copy Quiz</button>
 <button id="downloadQuizBtn" class="btn" disabled>Download Quiz</button>
-<div id="loadingIndicator">Generating quiz, please wait...</div>
+
 <div id="quizContainer" class="quiz-container"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
 <script>
-    let extractedText = "";
-    let generatedQuiz = "";
+  let extractedText = "";
+  let generatedQuiz = "";
 
-    document.getElementById('pdfInput').addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            extractedText = await extractPDFText(file);
-            alert("PDF text extracted successfully!");
-            document.getElementById('generateQuizBtn').disabled = false;
+  document.getElementById("pdfInput").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      extractedText = await extractPDFText(file);
+      alert("PDF text extracted successfully!");
+      document.getElementById("generateQuizBtn").disabled = false;
+    }
+  });
+
+  async function extractPDFText(file) {
+    const reader = new FileReader();
+    return new Promise((resolve) => {
+      reader.onload = async function () {
+        const typedArray = new Uint8Array(this.result);
+        const pdf = await pdfjsLib.getDocument(typedArray).promise;
+        let text = "";
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const pageText = content.items.map((item) => item.str).join(" ");
+          text += pageText + "\n";
         }
+        resolve(text);
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  document.getElementById("generateQuizBtn").addEventListener("click", async () => {
+    const numQuestions = prompt("How many quiz questions to generate?");
+    if (numQuestions && !isNaN(numQuestions)) {
+      generatedQuiz = await generateQuiz(extractedText, numQuestions);
+      document.getElementById("quizContainer").innerText = generatedQuiz;
+      document.getElementById("copyQuizBtn").disabled = false;
+      document.getElementById("downloadQuizBtn").disabled = false;
+    }
+  });
+
+  async function generateQuiz(text, numQuestions) {
+    const backendUrl = "/generate-quiz";
+
+    const response = await fetch(backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, numQuestions }),
     });
 
-    async function extractPDFText(file) {
-        const reader = new FileReader();
-        return new Promise((resolve) => {
-            reader.onload = async function() {
-                const typedArray = new Uint8Array(this.result);
-                const pdf = await pdfjsLib.getDocument(typedArray).promise;
-                let text = '';
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const content = await page.getTextContent();
-                    const pageText = content.items.map(item => item.str).join(' ');
-                    text += pageText + "\n";
-                }
-                resolve(text);
-            };
-            reader.readAsArrayBuffer(file);
-        });
+    if (!response.ok) {
+      return `Error: ${response.status} ${response.statusText}`;
     }
 
-    document.getElementById('generateQuizBtn').addEventListener('click', async () => {
-        const numQuestions = prompt("How many quiz questions to generate?");
-        if (numQuestions && !isNaN(numQuestions)) {
-            document.getElementById('loadingIndicator').style.display = 'block';
-            generatedQuiz = await generateQuiz(extractedText, numQuestions);
-            displayQuizAsTable(generatedQuiz);
-            document.getElementById('loadingIndicator').style.display = 'none';
-            document.getElementById('copyQuizBtn').disabled = false;
-            document.getElementById('downloadQuizBtn').disabled = false;
-        }
-    });
+    const data = await response.json();
+    return data.quiz || "Failed to generate quiz.";
+  }
 
-    async function generateQuiz(text, numQuestions) {
-        const apiKey = "AIzaSyCWFqfCAdrqAgQFB1JKpoLadvV9QGzw14E";
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
-
-        const prompt = `Generate ${numQuestions} quiz questions from the following text. Format each question as:\n\n` +
-            `title\timage\tthumbnail\tvideo\taudio\texplanation\texplanation_image\texplanation_video\texplanation_audio\t` +
-            `options_1_answer\toptions_1_is_correct\toptions_1_image\toptions_1_audio\toptions_1_video\t` +
-            `options_2_answer\toptions_2_is_correct\toptions_2_image\toptions_2_video\toptions_2_audio\t` +
-            `options_3_answer\toptions_3_is_correct\toptions_3_image\toptions_3_video\toptions_3_audio\t` +
-            `options_4_answer\toptions_4_is_correct\n\nFrom text:\n${text}`;
-
-        const response = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-        });
-
-        const data = await response.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || "Failed to generate quiz.";
+  document.getElementById("copyQuizBtn").addEventListener("click", () => {
+    if (generatedQuiz) {
+      navigator.clipboard
+        .writeText(generatedQuiz)
+        .then(() => alert("Quiz copied to clipboard!"))
+        .catch(() => alert("Failed to copy quiz."));
     }
+  });
 
-    function displayQuizAsTable(quizText) {
-        const lines = quizText.trim().split('\n');
-        if (lines.length < 2) {
-            document.getElementById('quizContainer').innerText = quizText;
-            return;
-        }
-
-        const headerCells = lines[0].split('\t');
-        let table = '<table><thead><tr>';
-        headerCells.forEach(cell => {
-            table += `<th>${cell}</th>`;
-        });
-        table += '</tr></thead><tbody>';
-
-        for (let i = 1; i < lines.length; i++) {
-            const rowCells = lines[i].split('\t');
-            table += '<tr>';
-            rowCells.forEach(cell => {
-                table += `<td>${cell}</td>`;
-            });
-            table += '</tr>';
-        }
-
-        table += '</tbody></table>';
-        document.getElementById('quizContainer').innerHTML = table;
+  document.getElementById("downloadQuizBtn").addEventListener("click", () => {
+    if (generatedQuiz) {
+      const blob = new Blob([generatedQuiz], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "quiz.txt";
+      link.click();
     }
-
-    document.getElementById('copyQuizBtn').addEventListener('click', () => {
-        if (generatedQuiz) {
-            navigator.clipboard.writeText(generatedQuiz)
-                .then(() => alert("Quiz copied to clipboard!"))
-                .catch(() => alert("Failed to copy quiz."));
-        }
-    });
-
-    document.getElementById('downloadQuizBtn').addEventListener('click', () => {
-        if (generatedQuiz) {
-            const blob = new Blob([generatedQuiz], { type: 'text/plain' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'quiz.txt';
-            link.click();
-        }
-    });
+  });
 </script>
 
 </body>
