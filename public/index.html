@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>PDF Quiz Generator</title>
 <style>
-  body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px; }
+  body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
   h1 { text-align: center; }
   .btn {
     padding: 10px 20px; background: #007BFF; color: white;
@@ -13,22 +13,23 @@
   }
   .btn:disabled { background: #cccccc; cursor: not-allowed; }
   .quiz-container {
-    margin-top: 20px; background: #f9f9f9;
-    padding: 10px; border-radius: 5px; overflow-x: auto;
-    max-height: 400px;
+    margin-top: 20px; 
+    background: #f9f9f9; 
+    padding: 15px; 
+    border-radius: 5px;
+    max-height: 500px; 
+    overflow: auto;
   }
   table {
-    border-collapse: collapse;
+    border-collapse: collapse; 
     width: 100%;
-    min-width: 800px;
   }
   th, td {
-    border: 1px solid #ddd;
-    padding: 6px 10px;
+    border: 1px solid #ddd; 
+    padding: 8px;
     vertical-align: top;
-    white-space: normal;
   }
-  thead th {
+  th {
     background-color: #007BFF;
     color: white;
     position: sticky;
@@ -107,30 +108,30 @@
     return data.quiz || "Failed to generate quiz.";
   }
 
+  // Converts tab separated quiz text into HTML table
   function renderQuizTable(quizText) {
-    // Split by lines, filter out empty lines
     const lines = quizText.trim().split('\n').filter(line => line.trim() !== '');
 
-    if (lines.length === 0) return 'No quiz data found.';
+    if (lines.length === 0) return '<p>No quiz data found.</p>';
 
-    // First line = headers
+    // Extract headers
     const headers = lines[0].split('\t');
 
-    // Remaining lines = rows
-    const dataRows = lines.slice(1);
+    // Extract rows
+    const rows = lines.slice(1);
 
     let html = '<table><thead><tr>';
     headers.forEach(header => {
-      html += `<th>${header || ''}</th>`;
+      html += `<th>${escapeHtml(header)}</th>`;
     });
     html += '</tr></thead><tbody>';
 
-    dataRows.forEach(row => {
+    rows.forEach(row => {
       const cols = row.split('\t');
       html += '<tr>';
-      // Make sure empty columns appear blank
-      headers.forEach((_, idx) => {
-        html += `<td>${cols[idx] ? cols[idx] : ''}</td>`;
+      headers.forEach((_, i) => {
+        const cell = cols[i] || '';
+        html += `<td>${escapeHtml(cell)}</td>`;
       });
       html += '</tr>';
     });
@@ -139,9 +140,21 @@
     return html;
   }
 
+  // Simple HTML escape for safety
+  function escapeHtml(text) {
+    if (!text) return '';
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   document.getElementById("copyQuizBtn").addEventListener("click", () => {
     if (generatedQuiz) {
-      navigator.clipboard.writeText(generatedQuiz)
+      navigator.clipboard
+        .writeText(generatedQuiz)
         .then(() => alert("Quiz copied to clipboard!"))
         .catch(() => alert("Failed to copy quiz."));
     }
