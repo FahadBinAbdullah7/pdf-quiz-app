@@ -13,13 +13,14 @@
   }
   .btn:disabled { background: #cccccc; cursor: not-allowed; }
   .quiz-container {
-    margin-top: 20px; background: #f9f9f9;
-    padding: 15px; border-radius: 5px;
+    margin-top: 20px; white-space: normal; background: #f9f9f9;
+    padding: 15px; border-radius: 5px; min-height: 150px;
   }
   table { width: 100%; border-collapse: collapse; margin-top: 20px; }
   th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
   th { background-color: #f2f2f2; }
-  #status { font-weight: bold; color: #007BFF; }
+  .loading { display: none; text-align: center; padding: 20px; }
+  .loading.active { display: block; }
 </style>
 </head>
 <body>
@@ -30,7 +31,7 @@
 <button id="copyQuizBtn" class="btn" disabled>Copy Quiz</button>
 <button id="downloadQuizBtn" class="btn" disabled>Download Quiz</button>
 
-<div id="status"></div>
+<div id="loadingIndicator" class="loading">Generating quiz, please wait...</div>
 <div id="quizContainer" class="quiz-container"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
@@ -69,34 +70,38 @@
   document.getElementById("generateQuizBtn").addEventListener("click", async () => {
     const numQuestions = prompt("How many quiz questions to generate?");
     if (numQuestions && !isNaN(numQuestions)) {
-      setStatus("Generating quiz... Please wait ⏳");
+      const loadingIndicator = document.getElementById("loadingIndicator");
+      loadingIndicator.classList.add("active");
+      document.getElementById("generateQuizBtn").disabled = true;
+      
       generatedQuiz = await generateQuiz(extractedText, numQuestions);
       document.getElementById("quizContainer").innerHTML = generateQuizTable(generatedQuiz);
+      
+      loadingIndicator.classList.remove("active");
+      document.getElementById("generateQuizBtn").disabled = false;
       document.getElementById("copyQuizBtn").disabled = false;
       document.getElementById("downloadQuizBtn").disabled = false;
-      clearStatus();
     }
   });
 
   async function generateQuiz(text, numQuestions) {
-    const response = await fetch("/generate-quiz", {
+    const backendUrl = "/generate-quiz";
+
+    const response = await fetch(backendUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, numQuestions })
+      body: JSON.stringify({ text, numQuestions }),
     });
 
     if (!response.ok) {
-      alert(`Error: ${response.status} ${response.statusText}`);
-      return "";
+      return `Error: ${response.status} ${response.statusText}`;
     }
 
     const data = await response.json();
-    return data.quiz || "";
+    return data.quiz || "Failed to generate quiz.";
   }
 
   function generateQuizTable(quizText) {
-    if (!quizText) return "<p>No quiz generated.</p>";
-
     const rows = quizText.trim().split('\n');
     if (rows.length === 0) return '<p>No quiz generated.</p>';
 
@@ -109,23 +114,26 @@
       'Option 4 Answer', 'Option 4 Correct'
     ];
 
-    let html = '<table id="quizTable"><thead><tr>';
-    headers.forEach(header => html += `<th>${header}</th>`);
+    let html = '<table><thead><tr>';
+    headers.forEach(header => {
+      html += `<th>${header}</th>`;
+    });
     html += '</tr></thead><tbody>';
 
     rows.forEach(row => {
-      const columns = row.split('\t').map((val, idx) => {
-        val = (val === 'null' || val === null || val === undefined) ? '' : val;
-
-        if (headers[idx]?.toLowerCase().includes('is_correct')) {
-          if (val.toLowerCase() === 'true') return '1';
-          if (val.toLowerCase() === 'false') return '0';
-        }
-        return val;
+      let columns = row.split('\t');
+      // Replace null with empty string, true/false with 1/0, and ensure explanation is blank
+      columns = columns.map((col, index) => {
+        if (col === 'null') return '';
+        if (col === 'true' && headers[index].includes('Correct')) return '1';
+        if (col === 'false' && headers[index].includes('Correct')) return '0';
+        if (headers[index] === 'Explanation') return '';
+        return col || '';
       });
-
       html += '<tr>';
-      columns.forEach(col => html += `<td>${col}</td>`);
+      columns.forEach(col => {
+        html += `<td>${col}</td>`;
+      });
       html += '</tr>';
     });
 
@@ -134,40 +142,71 @@
   }
 
   document.getElementById("copyQuizBtn").addEventListener("click", () => {
-    const quizTable = document.getElementById('quizTable');
-    if (!quizTable) return;
+    if (generatedQuiz) {
+      const headers = [
+        'Title', 'Image', 'Thumbnail', 'Video', 'Audio', 'Explanation',
+        'Explanation Image', 'Explanation Video', 'Explanation Audio',
+        'Option 1 Answer', 'Option 1 Correct', 'Option 1 Tint', 'Option 1 Audio', 'Option 1 Video',
+        'Option 2 Answer', 'Option 2 Correct', 'Option 2 Image', 'Option 2 Video', 'Option 2 Audio',
+        'Option 3 Answer', 'Option 3 Correct', 'Option 3 Image', 'Option 3 Video', 'Option 3 Audio',
+        'Option 4 Answer', 'Option 4 Correct'
+      ];
+      const rows = generatedQuiz.trim().split('\n');
+      let tableText = headers.join('\t') + '\n';
+      
+      rows.forEach(row => {
+        let columns = row.split('\t');
+        columns = columns.map((col, index) => {
+          if (col === 'null') return '';
+          if (col === 'true' && headers[index].includes('Correct')) return '1';
+          if (col === 'false' && headers[index].includes('Correct')) return '0';
+          if (headers[index] === 'Explanation') return '';
+          return col || '';
+        });
+        tableText += columns.join('\t') + '\n';
+      });
 
-    const range = document.createRange();
-    range.selectNode(quizTable);
-    const selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
+      navigator.clipboard
+        .writeText(tableText)
+        .then(() => alert("Quiz table copied to clipboard!"))
+        .ස
 
-    try {
-      document.execCommand('copy');
-      alert('Quiz table copied to clipboard (including headers).');
-    } catch {
-      alert('Failed to copy the quiz table.');
+System: .catch(() => alert("Failed to copy quiz table."));
     }
-    selection.removeAllRanges();
   });
 
   document.getElementById("downloadQuizBtn").addEventListener("click", () => {
-    if (!generatedQuiz) return;
-    const blob = new Blob([generatedQuiz], { type: "text/plain" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "quiz.txt";
-    link.click();
+    if (generatedQuiz) {
+      const headers = [
+        'Title', 'Image', 'Thumbnail', 'Video', 'Audio', 'Explanation',
+        'Explanation Image', 'Explanation Video', 'Explanation Audio',
+        'Option 1 Answer', 'Option 1 Correct', 'Option 1 Image', 'Option 1 Audio', 'Option 1 Video',
+        'Option 2 Answer', 'Option 2 Correct', 'Option 2 Image', 'Option 2 Video', 'Option 2 Audio',
+        'Option 3 Answer', 'Option 3 Correct', 'Option 3 Image', 'Option 3 Video', 'Option 3 Audio',
+        'Option 4 Answer', 'Option 4 Correct'
+      ];
+      let tableText = headers.join('\t') + '\n';
+      
+      const rows = generatedQuiz.trim().split('\n');
+      rows.forEach(row => {
+        let columns = row.split('\t');
+        columns = columns.map((col, index) => {
+          if (col === 'null') return '';
+          if (col === 'true' && headers[index].includes('Correct')) return '1';
+          if (col === 'false' && headers[index].includes('Correct')) return '0';
+          if (headers[index] === 'Explanation') return '';
+          return col || '';
+        });
+        tableText += columns.join('\t') + '\n';
+      });
+
+      const blob = new Blob([tableText], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "quiz.txt";
+      link.click();
+    }
   });
-
-  function setStatus(message) {
-    document.getElementById('status').textContent = message;
-  }
-
-  function clearStatus() {
-    document.getElementById('status').textContent = '';
-  }
 </script>
 
 </body>
