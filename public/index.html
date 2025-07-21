@@ -1,75 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>PDF Quiz Generator</title>
-<style>
-  body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px; }
-  h1 { text-align: center; }
-  .btn {
-    padding: 10px 20px; background: #007BFF; color: white;
-    border: none; border-radius: 5px; cursor: pointer; margin-right: 5px;
-  }
-  .btn:disabled { background: #cccccc; cursor: not-allowed; }
-  #quizContainer {
-    margin-top: 20px;
-    overflow-x: auto;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-  }
-  th, td {
-    border: 1px solid #ddd;
-    padding: 6px 8px;
-    text-align: left;
-  }
-  th {
-    background-color: #007BFF;
-    color: white;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-  }
-  #loadingIndicator {
-    display: none;
-    margin-top: 10px;
-    font-weight: bold;
-    color: #007BFF;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PDF Quiz Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .btn {
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-right: 5px;
+    }
+    .btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    #quizContainer {
+      margin-top: 20px;
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      table-layout: fixed;
+      word-wrap: break-word;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px 8px;
+      text-align: left;
+      font-size: 13px;
+    }
+    th {
+      background: #007bff;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    #loadingIndicator {
+      display: none;
+      margin-left: 10px;
+      font-weight: bold;
+      color: #007bff;
+    }
+  </style>
 </head>
 <body>
 
 <h1>PDF Quiz Generator</h1>
-<input type="file" id="pdfInput" accept="application/pdf" /><br /><br />
-<button id="generateQuizBtn" class="btn" disabled>Generate Quiz</button>
-<button id="copyQuizBtn" class="btn" disabled>Copy Quiz</button>
-<button id="downloadQuizBtn" class="btn" disabled>Download Quiz</button>
 
-<div id="loadingIndicator">Generating quiz... Please wait.</div>
+<input type="file" id="pdfInput" accept="application/pdf" /><br /><br />
+
+<button id="generateQuizBtn" class="btn" disabled>Generate Quiz</button>
+<span id="loadingIndicator">Generating quiz...</span><br /><br />
+
+<button id="copyQuizBtn" class="btn" disabled>Copy Quiz TSV</button>
+<button id="downloadQuizBtn" class="btn" disabled>Download Quiz TSV</button>
+
 <div id="quizContainer"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
 <script>
-  let extractedText = "";
-  let generatedQuizRaw = "";
-
+  const pdfInput = document.getElementById("pdfInput");
   const generateQuizBtn = document.getElementById("generateQuizBtn");
   const copyQuizBtn = document.getElementById("copyQuizBtn");
   const downloadQuizBtn = document.getElementById("downloadQuizBtn");
   const quizContainer = document.getElementById("quizContainer");
   const loadingIndicator = document.getElementById("loadingIndicator");
 
-  document.getElementById("pdfInput").addEventListener("change", async (e) => {
+  let extractedText = "";
+  let generatedQuizRaw = null;      // JSON array
+  let generatedQuizRawText = "";    // TSV string
+
+  pdfInput.addEventListener("change", async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      extractedText = await extractPDFText(file);
-      alert("PDF text extracted successfully!");
-      generateQuizBtn.disabled = false;
-    }
+    if (!file) return;
+    extractedText = await extractPDFText(file);
+    alert("PDF text extracted successfully!");
+    generateQuizBtn.disabled = false;
+    quizContainer.innerHTML = "";
+    copyQuizBtn.disabled = true;
+    downloadQuizBtn.disabled = true;
   });
 
   async function extractPDFText(file) {
@@ -93,21 +120,26 @@
 
   generateQuizBtn.addEventListener("click", async () => {
     const numQuestions = prompt("How many quiz questions to generate?");
-    if (!numQuestions || isNaN(numQuestions)) return alert("Please enter a valid number.");
-
-    loadingIndicator.style.display = "block";
-    generateQuizBtn.disabled = true;
-    copyQuizBtn.disabled = true;
-    downloadQuizBtn.disabled = true;
-    quizContainer.innerHTML = "";
+    if (!numQuestions || isNaN(numQuestions)) {
+      alert("Please enter a valid number.");
+      return;
+    }
 
     try {
-      generatedQuizRaw = await generateQuiz(extractedText, numQuestions);
+      loadingIndicator.style.display = "inline";
+      generateQuizBtn.disabled = true;
+      copyQuizBtn.disabled = true;
+      downloadQuizBtn.disabled = true;
+
+      generatedQuizRaw = await generateQuiz(extractedText, Number(numQuestions));
       renderQuizTable(generatedQuizRaw);
+
+      generatedQuizRawText = jsonToTSV(generatedQuizRaw);
+
       copyQuizBtn.disabled = false;
       downloadQuizBtn.disabled = false;
-    } catch (err) {
-      alert("Failed to generate quiz.");
+    } catch (e) {
+      alert("Failed to generate quiz: " + e.message);
     } finally {
       loadingIndicator.style.display = "none";
       generateQuizBtn.disabled = false;
@@ -115,6 +147,7 @@
   });
 
   async function generateQuiz(text, numQuestions) {
+    // Change the URL below to your backend API endpoint
     const backendUrl = "/generate-quiz";
 
     const response = await fetch(backendUrl, {
@@ -124,78 +157,83 @@
     });
 
     if (!response.ok) {
-      throw new Error("API error");
+      throw new Error("API error: " + response.status);
     }
-
-    const data = await response.json();
-    return data.quiz || "Failed to generate quiz.";
+    return await response.json(); // Expecting JSON array
   }
 
-  function renderQuizTable(rawText) {
-    // rawText is tab-separated values like:
-    // title\timage\tthumbnail\tvideo\taudio\texplanation ... (header)
-    // row1
-    // row2
-    // ...
-
-    if (!rawText.trim()) {
+  function renderQuizTable(jsonArray) {
+    if (!Array.isArray(jsonArray) || jsonArray.length === 0) {
       quizContainer.innerHTML = "<p>No quiz generated.</p>";
       return;
     }
 
-    const lines = rawText.trim().split("\n");
-    if (lines.length === 0) {
-      quizContainer.innerHTML = "<p>No quiz generated.</p>";
-      return;
-    }
+    const headers = Object.keys(jsonArray[0]);
 
     const table = document.createElement("table");
 
-    // Create header
-    const headers = lines[0].split("\t");
     const thead = document.createElement("thead");
     const headerRow = document.createElement("tr");
-    headers.forEach((h) => {
+    headers.forEach((header) => {
       const th = document.createElement("th");
-      th.textContent = h;
+      th.textContent = header;
       headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
     table.appendChild(thead);
 
-    // Create body
     const tbody = document.createElement("tbody");
-    for (let i = 1; i < lines.length; i++) {
+    jsonArray.forEach((item) => {
       const row = document.createElement("tr");
-      const cols = lines[i].split("\t");
-      cols.forEach((col) => {
+      headers.forEach((header) => {
         const td = document.createElement("td");
-        td.textContent = col;
+        let val = item[header];
+        if (typeof val === "boolean") val = val ? "1" : "0";
+        if (val === null || val === undefined) val = "";
+        td.textContent = val;
         row.appendChild(td);
       });
       tbody.appendChild(row);
-    }
+    });
     table.appendChild(tbody);
 
     quizContainer.innerHTML = "";
     quizContainer.appendChild(table);
   }
 
+  function jsonToTSV(jsonArray) {
+    if (!Array.isArray(jsonArray) || jsonArray.length === 0) return "";
+
+    const headers = Object.keys(jsonArray[0]);
+    const rows = jsonArray.map((item) =>
+      headers
+        .map((h) => {
+          let val = item[h];
+          if (typeof val === "boolean") val = val ? "1" : "0";
+          if (val === null || val === undefined) val = "";
+          return String(val).replace(/\t/g, " ").replace(/\n/g, " ");
+        })
+        .join("\t")
+    );
+
+    return headers.join("\t") + "\n" + rows.join("\n");
+  }
+
   copyQuizBtn.addEventListener("click", () => {
-    if (generatedQuizRaw) {
+    if (generatedQuizRawText) {
       navigator.clipboard
-        .writeText(generatedQuizRaw)
-        .then(() => alert("Quiz copied to clipboard!"))
+        .writeText(generatedQuizRawText)
+        .then(() => alert("Quiz TSV copied to clipboard!"))
         .catch(() => alert("Failed to copy quiz."));
     }
   });
 
   downloadQuizBtn.addEventListener("click", () => {
-    if (generatedQuizRaw) {
-      const blob = new Blob([generatedQuizRaw], { type: "text/plain" });
+    if (generatedQuizRawText) {
+      const blob = new Blob([generatedQuizRawText], { type: "text/plain" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = "quiz.txt";
+      link.download = "quiz.tsv";
       link.click();
     }
   });
