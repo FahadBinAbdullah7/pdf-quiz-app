@@ -67,8 +67,11 @@
   document.getElementById("generateQuizBtn").addEventListener("click", async () => {
     const numQuestions = prompt("How many quiz questions to generate?");
     if (numQuestions && !isNaN(numQuestions)) {
+      document.getElementById("quizContainer").innerHTML = "<p>Generating quiz, please wait...</p>";
+
       generatedQuiz = await generateQuiz(extractedText, numQuestions);
       document.getElementById("quizContainer").innerHTML = generateQuizTable(generatedQuiz);
+
       document.getElementById("copyQuizBtn").disabled = false;
       document.getElementById("downloadQuizBtn").disabled = false;
     }
@@ -113,8 +116,15 @@
     rows.forEach(row => {
       const columns = row.split('\t');
       html += '<tr>';
-      columns.forEach(col => {
-        html += `<td>${col || ''}</td>`;
+      columns.forEach((col, index) => {
+        let value = col === 'null' || col === null ? '' : col;
+
+        // Check if the column is one of the "Option Is Correct" columns
+        if ([10, 15, 20, 25].includes(index)) {
+          value = (value.toLowerCase() === 'true') ? '1' : '0';
+        }
+
+        html += `<td>${value}</td>`;
       });
       html += '</tr>';
     });
@@ -142,6 +152,7 @@
     }
   });
 </script>
+
 
 </body>
 </html>
