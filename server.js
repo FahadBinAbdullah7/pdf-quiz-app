@@ -15,10 +15,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post('/generate-quiz', async (req, res) => {
   const { text, numQuestions } = req.body;
 
+  // Updated prompt with clear instructions for the AI model
   const prompt = `Generate ${numQuestions} quiz questions from the following text. Format each question as follows:
 
 1. Each question should include the following fields:
-   - title: The question title
+   - title: The Main Question
    - image: A URL or placeholder for the image (if available)
    - thumbnail: A URL or placeholder for the thumbnail image (if available)
    - video: A URL or placeholder for a video (if available)
@@ -49,7 +50,7 @@ app.post('/generate-quiz', async (req, res) => {
 
 3. Each value in the above fields should be separated by a tab (`\t`) and each question should be separated by a newline (`\n`).
 
-4. For any missing or unavailable data, replace it with `null`, `undefined`, or a blank cell, as applicable (for example, if there's no image or video, use an empty string).
+4. For any missing or unavailable data, replace it with a blank cell, as applicable (for example, if there's no image or video, use an empty string).
 
 5. Format the final output in tab-separated format for each question:
    - **Example output format for a question**:
@@ -57,9 +58,7 @@ app.post('/generate-quiz', async (req, res) => {
      question_title\timage_url\tthumbnail_url\tvideo_url\taudio_url\texplanation\texplanation_image\texplanation_video\texplanation_audio\toption_1_answer\toption_1_is_correct\toption_1_image\toption_1_audio\toption_1_video\toption_2_answer\toption_2_is_correct\toption_2_image\toption_2_video\toption_2_audio\toption_3_answer\toption_3_is_correct\toption_3_image\toption_3_video\toption_3_audio\toption_4_answer\toption_4_is_correct
      ```
 
-Here is the actual request body you would send to the API:
-
-From text:
+From the text:
 ${text}`;
 
   try {
@@ -74,18 +73,47 @@ ${text}`;
       }
     );
 
+    // Check if the response contains the quiz data, otherwise return a failure message
     const quiz = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'Failed to generate quiz';
-    res.json({ quiz });
+    
+    // Format quiz data to handle null, true, false values (add this part if necessary)
+    const formattedQuiz = formatQuizData(quiz);
+    
+    // Send the formatted quiz to the client
+    res.json({ quiz: formattedQuiz });
   } catch (error) {
-    console.error(error.response?.data || error.message);
+    // Enhanced error handling
+    console.error("Error during API request:", error.message);
+    if (error.response) {
+      console.error("API Response Error:", error.response.data);
+    }
     res.status(500).json({ error: 'Failed to generate quiz' });
   }
 });
 
+// Function to format the quiz data (optional but recommended for handling null, false, true)
+function formatQuizData(quizText) {
+  const rows = quizText.trim().split('\n');
+
+  const formattedRows = rows.map(row => {
+    return row.split('\t').map(col => {
+      // Convert 'false' to 0, 'true' to 1, 'null'/'undefined' to blank cell
+      if (col === 'false') return '0';
+      else if (col === 'true') return '1';
+      else if (col === 'null' || col === 'undefined') return '';
+      return col;
+    }).join('\t');
+  });
+
+  return formattedRows.join('\n');
+}
+
+// Default route to serve the frontend HTML
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
