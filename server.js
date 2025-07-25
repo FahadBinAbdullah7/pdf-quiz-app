@@ -53,7 +53,7 @@ app.post('/generate-quiz', async (req, res) => {
 4. For any missing or unavailable data, replace it with null, undefined, or a blank cell, as applicable (for example, if there's no image or video, use an empty string).
 
 5. Format the final output in tab-separated format for each question:
-   - Example output format for a question:
+   - Example output format for one set of questions and this is the only header:
      question_title\timage_url\tthumbnail_url\tvideo_url\taudio_url\texplanation\texplanation_image\texplanation_video\texplanation_audio\toption_1_answer\toption_1_is_correct\toption_1_image\toption_1_audio\toption_1_video\toption_2_answer\toption_2_is_correct\toption_2_image\toption_2_video\toption_2_audio\toption_3_answer\toption_3_is_correct\toption_3_image\toption_3_video\toption_3_audio\toption_4_answer\toption_4_is_correct
 
 From the text:
