@@ -19,7 +19,7 @@ app.post('/generate-quiz', async (req, res) => {
   const prompt = `Generate ${numQuestions} quiz questions from the following text. Format each question as follows:
 
 1. Each question should include the following fields:
-   - title: The question title
+   - title: The question
    - image: A URL or placeholder for the image (if available)
    - thumbnail: A URL or placeholder for the thumbnail image (if available)
    - video: A URL or placeholder for a video (if available)
