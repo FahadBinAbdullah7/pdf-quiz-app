@@ -34,45 +34,47 @@ ${text}`;
       }
     );
 
-    let quiz = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'Failed to generate quiz';
+    // Check if the response contains the quiz data, otherwise return a failure message
+    const quiz = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'Failed to generate quiz';
     
-    // Format the quiz data to replace null/undefined and false/true
-    quiz = formatQuizData(quiz);
-
-    res.json({ quiz });
+    // Format quiz data to handle null, true, false values (add this part if necessary)
+    const formattedQuiz = formatQuizData(quiz);
+    
+    // Send the formatted quiz to the client
+    res.json({ quiz: formattedQuiz });
   } catch (error) {
-    console.error(error.response?.data || error.message);
+    // Enhanced error handling
+    console.error("Error during API request:", error.message);
+    if (error.response) {
+      console.error("API Response Error:", error.response.data);
+    }
     res.status(500).json({ error: 'Failed to generate quiz' });
   }
 });
 
+// Function to format the quiz data (optional but recommended for handling null, false, true)
 function formatQuizData(quizText) {
-  // Split the quiz into rows based on newline
   const rows = quizText.trim().split('\n');
 
-  // Process each row
   const formattedRows = rows.map(row => {
     return row.split('\t').map(col => {
-      // Convert 'true' to 1, 'false' to 0, and 'null'/'undefined' to empty string
-      if (col === 'false') {
-        return '0';
-      } else if (col === 'true') {
-        return '1';
-      } else if (col === 'null' || col === 'undefined') {
-        return ''; // blank cell
-      }
-      return col; // normal content
+      // Convert 'false' to 0, 'true' to 1, 'null'/'undefined' to blank cell
+      if (col === 'false') return '0';
+      else if (col === 'true') return '1';
+      else if (col === 'null' || col === 'undefined') return '';
+      return col;
     }).join('\t');
   });
 
-  // Join the processed rows back into the final formatted quiz
   return formattedRows.join('\n');
 }
 
+// Default route to serve the frontend HTML
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
