@@ -15,9 +15,49 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post('/generate-quiz', async (req, res) => {
   const { text, numQuestions } = req.body;
 
-  const prompt = `Generate ${numQuestions} quiz questions from the following text. Format each question as:
+  const prompt = `Generate ${numQuestions} quiz questions from the following text. Format each question as follows:
 
-title\timage\tthumbnail\tvideo\taudio\texplanation\texplanation_image\texplanation_video\texplanation_audio\toptions_1_answer\toptions_1_is_correct\toptions_1_image\toptions_1_audio\toptions_1_video\toptions_2_answer\toptions_2_is_correct\toptions_2_image\toptions_2_video\toptions_2_audio\toptions_3_answer\toptions_3_is_correct\toptions_3_image\toptions_3_video\toptions_3_audio\toptions_4_answer\toptions_4_is_correct
+1. Each question should include the following fields:
+   - title: The question title
+   - image: A URL or placeholder for the image (if available)
+   - thumbnail: A URL or placeholder for the thumbnail image (if available)
+   - video: A URL or placeholder for a video (if available)
+   - audio: A URL or placeholder for an audio clip (if available)
+   - explanation: A detailed explanation of the answer
+   - explanation_image: A URL or placeholder for an image related to the explanation (if available)
+   - explanation_video: A URL or placeholder for a video related to the explanation (if available)
+   - explanation_audio: A URL or placeholder for an audio clip related to the explanation (if available)
+
+2. Each question should have four options (Option 1, Option 2, Option 3, Option 4):
+   - options_1_answer: The answer for option 1
+   - options_1_is_correct: Boolean value (true/false) indicating whether option 1 is correct (Convert true to 1 and false to 0)
+   - options_1_image: A URL or placeholder for the image associated with option 1 (if available)
+   - options_1_audio: A URL or placeholder for the audio associated with option 1 (if available)
+   - options_1_video: A URL or placeholder for the video associated with option 1 (if available)
+   - options_2_answer: The answer for option 2
+   - options_2_is_correct: Boolean value (true/false) indicating whether option 2 is correct (Convert true to 1 and false to 0)
+   - options_2_image: A URL or placeholder for the image associated with option 2 (if available)
+   - options_2_audio: A URL or placeholder for the audio associated with option 2 (if available)
+   - options_2_video: A URL or placeholder for the video associated with option 2 (if available)
+   - options_3_answer: The answer for option 3
+   - options_3_is_correct: Boolean value (true/false) indicating whether option 3 is correct (Convert true to 1 and false to 0)
+   - options_3_image: A URL or placeholder for the image associated with option 3 (if available)
+   - options_3_audio: A URL or placeholder for the audio associated with option 3 (if available)
+   - options_3_video: A URL or placeholder for the video associated with option 3 (if available)
+   - options_4_answer: The answer for option 4
+   - options_4_is_correct: Boolean value (true/false) indicating whether option 4 is correct (Convert true to 1 and false to 0)
+
+3. Each value in the above fields should be separated by a tab (`\t`) and each question should be separated by a newline (`\n`).
+
+4. For any missing or unavailable data, replace it with `null`, `undefined`, or a blank cell, as applicable (for example, if there's no image or video, use an empty string).
+
+5. Format the final output in tab-separated format for each question:
+   - **Example output format for a question**:
+     ```
+     question_title\timage_url\tthumbnail_url\tvideo_url\taudio_url\texplanation\texplanation_image\texplanation_video\texplanation_audio\toption_1_answer\toption_1_is_correct\toption_1_image\toption_1_audio\toption_1_video\toption_2_answer\toption_2_is_correct\toption_2_image\toption_2_video\toption_2_audio\toption_3_answer\toption_3_is_correct\toption_3_image\toption_3_video\toption_3_audio\toption_4_answer\toption_4_is_correct
+     ```
+
+Here is the actual request body you would send to the API:
 
 From text:
 ${text}`;
