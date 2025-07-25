@@ -20,31 +20,31 @@ app.post('/generate-quiz', async (req, res) => {
 
 1. Each question should include the following fields:
    - title: The question
-   - image: A URL or placeholder for the image (if available)
-   - thumbnail: A URL or placeholder for the thumbnail image (if available)
-   - video: A URL or placeholder for a video (if available)
-   - audio: A URL or placeholder for an audio clip (if available)
+   - image: Blank cell
+   - thumbnail: Blank cell
+   - video: Blank cell
+   - audio: Blank cell
    - explanation: A detailed explanation of the answer
-   - explanation_image: A URL or placeholder for an image related to the explanation (if available)
-   - explanation_video: A URL or placeholder for a video related to the explanation (if available)
-   - explanation_audio: A URL or placeholder for an audio clip related to the explanation (if available)
+   - explanation_image: Blank cell
+   - explanation_video: Blank cell
+   - explanation_audio: Blank cell
 
 2. Each question should have four options (Option 1, Option 2, Option 3, Option 4):
    - options_1_answer: The answer for option 1
    - options_1_is_correct: Boolean value (true/false) indicating whether option 1 is correct (Convert true to 1 and false to 0)
-   - options_1_image: A URL or placeholder for the image associated with option 1 (if available)
-   - options_1_audio: A URL or placeholder for the audio associated with option 1 (if available)
-   - options_1_video: A URL or placeholder for the video associated with option 1 (if available)
+   - options_1_image: Blank cell
+   - options_1_audio: Blank cell
+   - options_1_video: Blank cell
    - options_2_answer: The answer for option 2
    - options_2_is_correct: Boolean value (true/false) indicating whether option 2 is correct (Convert true to 1 and false to 0)
-   - options_2_image: A URL or placeholder for the image associated with option 2 (if available)
-   - options_2_audio: A URL or placeholder for the audio associated with option 2 (if available)
-   - options_2_video: A URL or placeholder for the video associated with option 2 (if available)
+   - options_2_image: Blank cell
+   - options_2_audio: Blank cell
+   - options_2_video: Blank cell
    - options_3_answer: The answer for option 3
    - options_3_is_correct: Boolean value (true/false) indicating whether option 3 is correct (Convert true to 1 and false to 0)
-   - options_3_image: A URL or placeholder for the image associated with option 3 (if available)
-   - options_3_audio: A URL or placeholder for the audio associated with option 3 (if available)
-   - options_3_video: A URL or placeholder for the video associated with option 3 (if available)
+   - options_3_image: Blank cell
+   - options_3_audio: Blank cell
+   - options_3_video: Blank cell
    - options_4_answer: The answer for option 4
    - options_4_is_correct: Boolean value (true/false) indicating whether option 4 is correct (Convert true to 1 and false to 0)
 
