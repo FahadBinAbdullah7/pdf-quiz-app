@@ -15,11 +15,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post('/generate-quiz', async (req, res) => {
   const { text, numQuestions } = req.body;
 
-  // Updated prompt with clear instructions for the AI model
+  // Fixed the multi-line string with template literals
   const prompt = `Generate ${numQuestions} quiz questions from the following text. Format each question as follows:
 
 1. Each question should include the following fields:
-   - title: The Main Question
+   - title: The question title
    - image: A URL or placeholder for the image (if available)
    - thumbnail: A URL or placeholder for the thumbnail image (if available)
    - video: A URL or placeholder for a video (if available)
@@ -48,15 +48,13 @@ app.post('/generate-quiz', async (req, res) => {
    - options_4_answer: The answer for option 4
    - options_4_is_correct: Boolean value (true/false) indicating whether option 4 is correct (Convert true to 1 and false to 0)
 
-3. Each value in the above fields should be separated by a tab (`\t`) and each question should be separated by a newline (`\n`).
+3. Each value in the above fields should be separated by a tab (\t) and each question should be separated by a newline (\n).
 
-4. For any missing or unavailable data, replace it with a blank cell, as applicable (for example, if there's no image or video, use an empty string).
+4. For any missing or unavailable data, replace it with null, undefined, or a blank cell, as applicable (for example, if there's no image or video, use an empty string).
 
 5. Format the final output in tab-separated format for each question:
-   - **Example output format for a question**:
-     ```
+   - Example output format for a question:
      question_title\timage_url\tthumbnail_url\tvideo_url\taudio_url\texplanation\texplanation_image\texplanation_video\texplanation_audio\toption_1_answer\toption_1_is_correct\toption_1_image\toption_1_audio\toption_1_video\toption_2_answer\toption_2_is_correct\toption_2_image\toption_2_video\toption_2_audio\toption_3_answer\toption_3_is_correct\toption_3_image\toption_3_video\toption_3_audio\toption_4_answer\toption_4_is_correct
-     ```
 
 From the text:
 ${text}`;
