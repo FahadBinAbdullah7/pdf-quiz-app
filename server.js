@@ -34,13 +34,40 @@ ${text}`;
       }
     );
 
-    const quiz = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'Failed to generate quiz';
+    let quiz = response.data.candidates?.[0]?.content?.parts?.[0]?.text || 'Failed to generate quiz';
+    
+    // Format the quiz data to replace null/undefined and false/true
+    quiz = formatQuizData(quiz);
+
     res.json({ quiz });
   } catch (error) {
     console.error(error.response?.data || error.message);
     res.status(500).json({ error: 'Failed to generate quiz' });
   }
 });
+
+function formatQuizData(quizText) {
+  // Split the quiz into rows based on newline
+  const rows = quizText.trim().split('\n');
+
+  // Process each row
+  const formattedRows = rows.map(row => {
+    return row.split('\t').map(col => {
+      // Convert 'true' to 1, 'false' to 0, and 'null'/'undefined' to empty string
+      if (col === 'false') {
+        return '0';
+      } else if (col === 'true') {
+        return '1';
+      } else if (col === 'null' || col === 'undefined') {
+        return ''; // blank cell
+      }
+      return col; // normal content
+    }).join('\t');
+  });
+
+  // Join the processed rows back into the final formatted quiz
+  return formattedRows.join('\n');
+}
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
