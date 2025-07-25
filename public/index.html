@@ -114,7 +114,16 @@
       const columns = row.split('\t');
       html += '<tr>';
       columns.forEach(col => {
-        html += `<td>${col || ''}</td>`;
+        // Handle blank cells, 0 and 1 replacements
+        if (col === 'null' || col === 'undefined' || col === '') {
+          html += `<td></td>`;  // Blank cell for null/undefined
+        } else if (col === 'false') {
+          html += `<td>0</td>`; // Replace false with 0
+        } else if (col === 'true') {
+          html += `<td>1</td>`; // Replace true with 1
+        } else {
+          html += `<td>${col}</td>`;  // Normal content
+        }
       });
       html += '</tr>';
     });
