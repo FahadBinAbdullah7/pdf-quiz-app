@@ -15,12 +15,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post('/generate-quiz', async (req, res) => {
   const { text, numQuestions } = req.body;
 
-  const prompt = Generate ${numQuestions} quiz questions from the following text. Format each question as:
+  const prompt = `Generate ${numQuestions} quiz questions from the following text. Format each question as:
 
 title\timage\tthumbnail\tvideo\taudio\texplanation\texplanation_image\texplanation_video\texplanation_audio\toptions_1_answer\toptions_1_is_correct\toptions_1_image\toptions_1_audio\toptions_1_video\toptions_2_answer\toptions_2_is_correct\toptions_2_image\toptions_2_video\toptions_2_audio\toptions_3_answer\toptions_3_is_correct\toptions_3_image\toptions_3_video\toptions_3_audio\toptions_4_answer\toptions_4_is_correct
 
 From text:
-${text};
+${text}`;
 
   try {
     const response = await axios.post(
@@ -47,5 +47,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(Server running on port ${PORT});
+  console.log(`Server running on port ${PORT}`);
 });
