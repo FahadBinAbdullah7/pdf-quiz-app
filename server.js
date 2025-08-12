@@ -18,28 +18,45 @@ app.post('/generate-quiz', async (req, res) => {
   // Fixed the multi-line string with template literals
   const prompt = `Generate ${numQuestions} quiz questions from the following text. Format each question as follows:
 
-output all quiz data strictly in a markdown table with the following columns:
+1. Each question should include the following fields:
+   - title: The question
+   - image: Blank cell
+   - thumbnail: Blank cell
+   - video: Blank cell
+   - audio: Blank cell
+   - explanation: A detailed explanation of the answer
+   - explanation_image: Blank cell
+   - explanation_video: Blank cell
+   - explanation_audio: Blank cell
 
-title, image, thumbnail, video, audio, explanation, explanation_image, explanation_video, explanation_audio,  
-options_1_answer, options_1_is_correct, options_1_image, options_1_audio, options_1_video,  
-options_2_answer, options_2_is_correct, options_2_image, options_2_video, options_2_audio,  
-options_3_answer, options_3_is_correct, options_3_image, options_3_video, options_3_audio,  
-options_4_answer, options_4_is_correct, options_4_image, options_4_video, options_4_audio.
+2. Each question should have four options (Option 1, Option 2, Option 3, Option 4):
+   - options_1_answer: The answer for option 1
+   - options_1_is_correct: Boolean value (true/false) indicating whether option 1 is correct (Convert true to 1 and false to 0)
+   - options_1_image: Blank cell
+   - options_1_audio: Blank cell
+   - options_1_video: Blank cell
+   - options_2_answer: The answer for option 2
+   - options_2_is_correct: Boolean value (true/false) indicating whether option 2 is correct (Convert true to 1 and false to 0)
+   - options_2_image: Blank cell
+   - options_2_audio: Blank cell
+   - options_2_video: Blank cell
+   - options_3_answer: The answer for option 3
+   - options_3_is_correct: Boolean value (true/false) indicating whether option 3 is correct (Convert true to 1 and false to 0)
+   - options_3_image: Blank cell
+   - options_3_audio: Blank cell
+   - options_3_video: Blank cell
+   - options_4_answer: The answer for option 4
+   - options_4_is_correct: Boolean value (true/false) indicating whether option 4 is correct (Convert true to 1 and false to 0)
 
+3. Each value in the above fields should be separated by a tab (\t) and each question should be separated by a newline (\n).
 
-Requirements for the output:  
-The title column contains only the quiz questions
- Each quiz must have exactly 4 options.
-The correct answer must be placed in the relevant options_X_answer cell, where X is the option number (1–4).
-In the matching options_X_is_correct cell for the correct answer, write 1.
-For all incorrect options, write 0 in their options_X_is_correct cells.
-Only one option per question should have 1 in its _is_correct column.
-All options_X_answer cells for incorrect options should still contain plausible but write 0 .
+4. For any missing or unavailable data, replace it with null, undefined, or a blank cell, as applicable (for example, if there's no image or video, use an empty string).
 
-Leave the explanation, explanation_image, explanation_video, explanation_audio, and all media columns (image, thumbnail, video, audio, options_X_image, options_X_audio, options_X_video) blank.  
-Use only the provided data to create questions and options—do not add any external information.  
-Format the entire output strictly as a markdown table with the headers above.  
-Do not include any text outside the markdown table in your final output.
+5. Format the final output in tab-separated format for each question:
+   - Example output format for one set of questions and this is the only header:
+     question_title\timage_url\tthumbnail_url\tvideo_url\taudio_url\texplanation\texplanation_image\texplanation_video\texplanation_audio\toption_1_answer\toption_1_is_correct\toption_1_image\toption_1_audio\toption_1_video\toption_2_answer\toption_2_is_correct\toption_2_image\toption_2_video\toption_2_audio\toption_3_answer\toption_3_is_correct\toption_3_image\toption_3_video\toption_3_audio\toption_4_answer\toption_4_is_correct
+
+From the text:
 ${text}`;
 
   try {
